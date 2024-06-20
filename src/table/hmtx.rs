@@ -38,7 +38,7 @@ impl Hmtx {
             .collect::<Result<_, _>>()?;
 
         let remainder = (num_glyphs - num_of_long_hor_metrics) as usize;
-        let left_side_bearing = stream.read_i16_seq(remainder)?;
+        let left_side_bearing = stream.read_seq(remainder)?;
 
         Ok(Self {
             h_metrics,

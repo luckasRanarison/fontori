@@ -65,10 +65,7 @@ impl Table {
                 let length = next
                     .map(|next| next.offset - current.offset) // possible padding
                     .unwrap_or(current.length);
-                let table = stream
-                    .read_u8_seq(length as usize)
-                    .map(|bytes| Self::Other(bytes.into()))?;
-                Ok(table)
+                Ok(stream.read_seq(length as usize).map(Self::Other)?)
             }
         }
     }

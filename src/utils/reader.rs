@@ -3,7 +3,10 @@ use crate::{
     utils::{bincode::decode, types::Seq},
 };
 use bincode::Decode;
-use std::io::{self, Read, Seek};
+use std::{
+    io::{self, Read, Seek},
+    mem,
+};
 
 pub trait TryFromStream: Sized {
     fn try_from_stream<T>(stream: &mut T) -> Result<Self, Error>
@@ -20,39 +23,49 @@ where
     }
 }
 
+pub trait TryFromBytes: Sized {
+    fn try_from_bytes(bytes: &[u8]) -> Option<Self>;
+}
+
+impl TryFromBytes for u8 {
+    fn try_from_bytes(bytes: &[u8]) -> Option<Self> {
+        bytes.first().cloned()
+    }
+}
+
+impl TryFromBytes for u16 {
+    fn try_from_bytes(bytes: &[u8]) -> Option<Self> {
+        bytes.try_into().ok().map(u16::from_be_bytes)
+    }
+}
+
+impl TryFromBytes for i16 {
+    fn try_from_bytes(bytes: &[u8]) -> Option<Self> {
+        bytes.try_into().ok().map(i16::from_be_bytes)
+    }
+}
+
 pub trait ReadSeq {
-    fn read_u8_seq(&mut self, length: usize) -> io::Result<Seq<u8>>;
-    fn read_u16_seq(&mut self, length: usize) -> io::Result<Seq<u16>>;
-    fn read_i16_seq(&mut self, length: usize) -> io::Result<Seq<i16>>;
+    fn read_seq<T>(&mut self, length: usize) -> io::Result<Seq<T>>
+    where
+        T: TryFromBytes;
 }
 
 impl<T> ReadSeq for T
 where
     T: Read,
 {
-    fn read_u8_seq(&mut self, length: usize) -> io::Result<Seq<u8>> {
-        let mut buffer = vec![0; length];
+    fn read_seq<U>(&mut self, length: usize) -> io::Result<Seq<U>>
+    where
+        U: TryFromBytes,
+    {
+        let size = mem::size_of::<T>();
+        let mut buffer = vec![0; length * size];
         self.read_exact(&mut buffer)?;
-        Ok(buffer.into())
-    }
 
-    fn read_u16_seq(&mut self, length: usize) -> io::Result<Seq<u16>> {
-        let mut buffer = vec![0; length * 2];
-        self.read_exact(&mut buffer)?;
-        let values = buffer
-            .chunks_exact(2)
-            .map(|c| u16::from_be_bytes([c[0], c[1]]))
-            .collect();
-        Ok(values)
-    }
-
-    fn read_i16_seq(&mut self, length: usize) -> io::Result<Seq<i16>> {
-        let mut buffer = vec![0; length * 2];
-        self.read_exact(&mut buffer)?;
-        let values = buffer
-            .chunks_exact(2)
-            .map(|c| i16::from_be_bytes([c[0], c[1]]))
-            .collect();
-        Ok(values)
+        Ok(buffer
+            .chunks_exact(size)
+            .flat_map(U::try_from_bytes)
+            .collect::<_>())
     }
 }
