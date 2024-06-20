@@ -1,5 +1,7 @@
 mod head;
 mod hhea;
+mod hmtx;
+mod maxp;
 
 use crate::{
     error::Error,
@@ -10,12 +12,17 @@ use crate::{
     },
 };
 use bincode::{enc::Encoder, error::EncodeError, Encode};
-use std::io::{Read, Seek, SeekFrom};
+use std::{
+    collections::BTreeMap,
+    io::{Read, Seek, SeekFrom},
+};
 
 #[derive(Debug)]
 pub enum Table {
     Head(head::Head),
     Hhea(hhea::Hhea),
+    Maxp(maxp::Maxp),
+    Hmtx(hmtx::Hmtx),
     Other(Seq<u8>),
 }
 
@@ -24,15 +31,18 @@ impl Encode for Table {
         match self {
             Table::Head(head) => head.encode(encoder),
             Table::Hhea(hhea) => hhea.encode(encoder),
+            Table::Maxp(maxp) => maxp.encode(encoder),
+            Table::Hmtx(htmx) => htmx.encode(encoder),
             Table::Other(table) => table.encode(encoder),
         }
     }
 }
 
 impl Table {
-    pub fn try_from_entries<T>(
+    pub fn try_from_params<T>(
         current: &TableEntry,
         next: Option<&TableEntry>,
+        tables: &BTreeMap<u32, Table>,
         stream: &mut T,
     ) -> Result<Self, Error>
     where
@@ -43,13 +53,15 @@ impl Table {
         match &current.tag.to_be_bytes() {
             b"head" => Ok(Self::Head(decode(stream)?)),
             b"hhea" => Ok(Self::Hhea(decode(stream)?)),
+            b"maxp" => Ok(Self::Maxp(decode(stream)?)),
+            b"hmtx" => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
             _ => {
                 let length = next
                     .map(|next| next.offset - current.offset) // possible padding
                     .unwrap_or(current.length);
                 let table = stream
                     .read_u8_vec(length as usize)
-                    .map(|bytes| Self::Other(Seq::new(bytes)))?;
+                    .map(|bytes| Self::Other(bytes.into()))?;
                 Ok(table)
             }
         }

@@ -25,10 +25,6 @@ pub type Padding<const N: usize> = [u8; N];
 pub struct Seq<T>(Vec<T>);
 
 impl<T> Seq<T> {
-    pub fn new(value: Vec<T>) -> Self {
-        Self(value)
-    }
-
     pub fn as_slice(&self) -> &[T] {
         &self.0
     }
@@ -58,5 +54,11 @@ where
 impl<T> FromIterator<T> for Seq<T> {
     fn from_iter<U: IntoIterator<Item = T>>(iter: U) -> Self {
         Self(Vec::from_iter(iter))
+    }
+}
+
+impl<T> From<Vec<T>> for Seq<T> {
+    fn from(value: Vec<T>) -> Self {
+        Self(value)
     }
 }

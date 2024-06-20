@@ -10,6 +10,8 @@ pub enum Error {
     EncodeError(#[from] EncodeError),
     #[error("{0}")]
     DecodeError(#[from] DecodeError),
+    #[error("{0}")]
+    MissingDependency(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
