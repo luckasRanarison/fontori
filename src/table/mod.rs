@@ -3,6 +3,8 @@ mod hhea;
 mod hmtx;
 mod maxp;
 
+pub mod tags;
+
 use crate::{
     error::Error,
     ttf::font_dir::TableEntry,
@@ -50,11 +52,11 @@ impl Table {
     {
         stream.seek(SeekFrom::Start(current.offset.into()))?;
 
-        match &current.tag.to_be_bytes() {
-            b"head" => Ok(Self::Head(decode(stream)?)),
-            b"hhea" => Ok(Self::Hhea(decode(stream)?)),
-            b"maxp" => Ok(Self::Maxp(decode(stream)?)),
-            b"hmtx" => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
+        match current.tag {
+            tags::HEAD => Ok(Self::Head(decode(stream)?)),
+            tags::HHEA => Ok(Self::Hhea(decode(stream)?)),
+            tags::MAXP => Ok(Self::Maxp(decode(stream)?)),
+            tags::HMTX => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
             _ => {
                 let length = next
                     .map(|next| next.offset - current.offset) // possible padding
