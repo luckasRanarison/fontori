@@ -1,5 +1,12 @@
-use crate::utils::types::Seq;
-use bincode::{de::Decoder, error::DecodeError, Decode, Encode};
+use crate::{
+    error::Error,
+    utils::{
+        reader::{ReadSeq, TryFromStream},
+        types::Seq,
+    },
+};
+use bincode::{Decode, Encode};
+use std::io::{Read, Seek};
 
 #[derive(Debug, Encode)]
 pub struct FontDirectory {
@@ -7,12 +14,14 @@ pub struct FontDirectory {
     pub table_directory: Seq<TableEntry>,
 }
 
-impl Decode for FontDirectory {
-    fn decode<D: Decoder>(decoder: &mut D) -> Result<Self, DecodeError> {
-        let offset_subtable = OffsetSubtable::decode(decoder)?;
-        let table_directory = (0..offset_subtable.num_tables)
-            .map(|_| TableEntry::decode(decoder))
-            .collect::<Result<_, _>>()?;
+impl TryFromStream for FontDirectory {
+    fn try_from_stream<T>(stream: &mut T) -> Result<Self, Error>
+    where
+        T: Read + Seek,
+    {
+        let offset_subtable = OffsetSubtable::try_from_stream(stream)?;
+        let num_tables = offset_subtable.num_tables as usize;
+        let table_directory = stream.read_seq(num_tables)?;
 
         Ok(Self {
             offset_subtable,

@@ -27,17 +27,15 @@ impl Hmtx {
         let num_glyphs = match tables.get(&tags::MAXP) {
             Some(Table::Maxp(maxp)) => Ok(maxp.num_glyphs),
             _ => Err(Error::MissingDependency("maxp".to_owned())),
-        }?;
+        }? as usize;
+
         let num_of_long_hor_metrics = match tables.get(&tags::HHEA) {
             Some(Table::Hhea(hhea)) => Ok(hhea.num_of_long_hor_metrics),
             _ => Err(Error::MissingDependency("hhea".to_owned())),
-        }?;
+        }? as usize;
 
-        let h_metrics = (0..num_of_long_hor_metrics)
-            .map(|_| LongHorMetric::try_from_stream(stream))
-            .collect::<Result<_, _>>()?;
-
-        let remainder = (num_glyphs - num_of_long_hor_metrics) as usize;
+        let h_metrics = stream.read_seq(num_of_long_hor_metrics)?;
+        let remainder = num_glyphs - num_of_long_hor_metrics;
         let left_side_bearing = stream.read_seq(remainder)?;
 
         Ok(Self {

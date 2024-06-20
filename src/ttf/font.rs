@@ -25,6 +25,7 @@ impl TryFromStream for Font {
         let table_dir = font_directory.table_directory.as_slice();
         let mut tables_map = BTreeMap::<u32, Table>::new();
         let mut sorted_entries = table_dir.iter().collect::<Vec<_>>();
+
         sorted_entries.sort_by_key(|t| t.offset);
 
         for i in 0..sorted_entries.len() {
