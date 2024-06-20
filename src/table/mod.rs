@@ -32,7 +32,7 @@ impl Encode for Table {
 impl Table {
     pub fn try_from_entries<T>(
         current: &TableEntry,
-        next: Option<&&TableEntry>,
+        next: Option<&TableEntry>,
         stream: &mut T,
     ) -> Result<Self, Error>
     where
@@ -45,7 +45,7 @@ impl Table {
             b"hhea" => Ok(Self::Hhea(decode(stream)?)),
             _ => {
                 let length = next
-                    .map(|next| next.offset - current.offset)
+                    .map(|next| next.offset - current.offset) // possible padding
                     .unwrap_or(current.length);
                 let table = stream
                     .read_u8_vec(length as usize)

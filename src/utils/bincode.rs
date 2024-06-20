@@ -19,10 +19,7 @@ pub fn encode<T: Encode>(value: T) -> Result<Vec<u8>, EncodeError> {
     bincode::encode_to_vec(value, BINCODE_CONFIG)
 }
 
-#[derive(Debug, Encode, Decode)]
-pub struct Padding<const N: usize> {
-    __: [u8; N],
-}
+pub type Padding<const N: usize> = [u8; N];
 
 #[derive(Debug)]
 pub struct Seq<T>(Vec<T>);

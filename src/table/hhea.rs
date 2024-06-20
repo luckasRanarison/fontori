@@ -17,7 +17,7 @@ pub struct Hhea {
     pub carret_slope_rise: i16,
     pub carret_slope_run: i16,
     pub carret_offset: FWord,
-    pub __: Padding<8>,
+    pub __: Padding<8>, // reserved
     pub metric_data_format: i16,
     pub num_of_long_hor_metrics: u16,
 }

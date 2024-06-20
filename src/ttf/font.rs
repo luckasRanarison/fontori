@@ -24,7 +24,7 @@ impl Font {
         sorted_tables.sort_by_key(|t| t.offset);
 
         let tables = (0..sorted_tables.len())
-            .map(|i| (sorted_tables[i], sorted_tables.get(i + 1)))
+            .map(|i| (sorted_tables[i], sorted_tables.get(i + 1).cloned()))
             .map(|(c, n)| Table::try_from_entries(c, n, stream))
             .collect::<Result<_>>()?;
 
