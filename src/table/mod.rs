@@ -10,8 +10,8 @@ use crate::{
     error::Error,
     ttf::font_dir::TableEntry,
     utils::{
-        bincode::{decode, Seq},
-        reader::ReadVec,
+        reader::{ReadSeq, TryFromStream},
+        types::Seq,
     },
 };
 use bincode::{enc::Encoder, error::EncodeError, Encode};
@@ -56,17 +56,17 @@ impl Table {
         stream.seek(SeekFrom::Start(current.offset.into()))?;
 
         match current.tag {
-            tags::HEAD => Ok(Self::Head(decode(stream)?)),
-            tags::HHEA => Ok(Self::Hhea(decode(stream)?)),
-            tags::MAXP => Ok(Self::Maxp(decode(stream)?)),
-            tags::HMTX => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
+            tags::HEAD => Ok(Self::Head(head::Head::try_from_stream(stream)?)),
+            tags::HHEA => Ok(Self::Hhea(hhea::Hhea::try_from_stream(stream)?)),
+            tags::MAXP => Ok(Self::Maxp(maxp::Maxp::try_from_stream(stream)?)),
             tags::CMAP => Ok(Self::Cmap(cmap::Cmap::try_from_stream(stream)?)),
+            tags::HMTX => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
             _ => {
                 let length = next
                     .map(|next| next.offset - current.offset) // possible padding
                     .unwrap_or(current.length);
                 let table = stream
-                    .read_u8_vec(length as usize)
+                    .read_u8_seq(length as usize)
                     .map(|bytes| Self::Other(bytes.into()))?;
                 Ok(table)
             }

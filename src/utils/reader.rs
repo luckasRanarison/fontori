@@ -1,22 +1,42 @@
-use std::io::{self, Read};
+use crate::{
+    error::Error,
+    utils::{bincode::decode, types::Seq},
+};
+use bincode::Decode;
+use std::io::{self, Read, Seek};
 
-pub trait ReadVec {
-    fn read_u8_vec(&mut self, length: usize) -> io::Result<Vec<u8>>;
-    fn read_u16_vec(&mut self, length: usize) -> io::Result<Vec<u16>>;
-    fn read_i16_vec(&mut self, length: usize) -> io::Result<Vec<i16>>;
+pub trait TryFromStream: Sized {
+    fn try_from_stream<T>(stream: &mut T) -> Result<Self, Error>
+    where
+        T: Read + Seek;
 }
 
-impl<T> ReadVec for T
+impl<T> TryFromStream for T
+where
+    T: Decode,
+{
+    fn try_from_stream<R: Read>(stream: &mut R) -> Result<Self, Error> {
+        Ok(decode(stream)?)
+    }
+}
+
+pub trait ReadSeq {
+    fn read_u8_seq(&mut self, length: usize) -> io::Result<Seq<u8>>;
+    fn read_u16_seq(&mut self, length: usize) -> io::Result<Seq<u16>>;
+    fn read_i16_seq(&mut self, length: usize) -> io::Result<Seq<i16>>;
+}
+
+impl<T> ReadSeq for T
 where
     T: Read,
 {
-    fn read_u8_vec(&mut self, length: usize) -> io::Result<Vec<u8>> {
+    fn read_u8_seq(&mut self, length: usize) -> io::Result<Seq<u8>> {
         let mut buffer = vec![0; length];
         self.read_exact(&mut buffer)?;
-        Ok(buffer)
+        Ok(buffer.into())
     }
 
-    fn read_u16_vec(&mut self, length: usize) -> io::Result<Vec<u16>> {
+    fn read_u16_seq(&mut self, length: usize) -> io::Result<Seq<u16>> {
         let mut buffer = vec![0; length * 2];
         self.read_exact(&mut buffer)?;
         let values = buffer
@@ -26,7 +46,7 @@ where
         Ok(values)
     }
 
-    fn read_i16_vec(&mut self, length: usize) -> io::Result<Vec<i16>> {
+    fn read_i16_seq(&mut self, length: usize) -> io::Result<Seq<i16>> {
         let mut buffer = vec![0; length * 2];
         self.read_exact(&mut buffer)?;
         let values = buffer

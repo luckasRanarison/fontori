@@ -4,10 +4,13 @@ mod format_6;
 
 use crate::{
     error::Error,
-    utils::bincode::{decode, Seq},
+    utils::{reader::TryFromStream, types::Seq},
 };
 use bincode::{enc::Encoder, error::EncodeError, Decode, Encode};
-use std::io::{Read, Seek};
+use std::{
+    collections::HashSet,
+    io::{Read, Seek},
+};
 
 #[derive(Debug, Encode)]
 pub struct Cmap {
@@ -16,20 +19,28 @@ pub struct Cmap {
     pub subtables: Seq<CmapSubtable>,
 }
 
-impl Cmap {
-    pub fn try_from_stream<R>(stream: &mut R) -> Result<Self, Error>
+impl TryFromStream for Cmap {
+    fn try_from_stream<R>(stream: &mut R) -> Result<Self, Error>
     where
         R: Read + Seek,
     {
-        let index: CmapHeader = decode(stream)?;
+        let index = CmapHeader::try_from_stream(stream)?;
         let subtable_metadata = (0..index.number_subtables)
-            .map(|_| decode::<CmapSubtableMetadata, _>(stream))
+            .map(|_| CmapSubtableMetadata::try_from_stream(stream))
+            .collect::<Result<Seq<_>, _>>()?;
+        let offsets = subtable_metadata
+            .iter()
+            .map(|t| t.offset)
+            .collect::<HashSet<_>>();
+        let subtables = offsets
+            .into_iter()
+            .map(|_| CmapSubtable::try_from_stream(stream))
             .collect::<Result<Seq<_>, _>>()?;
 
         Ok(Self {
             index,
             subtable_metadata,
-            subtables: todo!(),
+            subtables,
         })
     }
 }
@@ -52,6 +63,12 @@ pub enum CmapSubtable {
     Format4(format_4::Format4),
     Format6(format_6::Format6),
     Format12(format_12::Format12),
+}
+
+impl TryFromStream for CmapSubtable {
+    fn try_from_stream<R: Read>(stream: &mut R) -> Result<Self, Error> {
+        todo!()
+    }
 }
 
 impl Encode for CmapSubtable {

@@ -1,6 +1,6 @@
 use crate::{
     sfnt::types::{FWord, Fixed, UFWord},
-    utils::bincode::Padding,
+    utils::types::Padding,
 };
 use bincode::{Decode, Encode};
 

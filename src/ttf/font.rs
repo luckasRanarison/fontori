@@ -2,7 +2,7 @@ use crate::{
     error::Result,
     table::Table,
     ttf::font_dir::FontDirectory,
-    utils::bincode::{decode, Seq},
+    utils::{reader::TryFromStream, types::Seq},
 };
 use bincode::Encode;
 use std::{
@@ -16,12 +16,12 @@ pub struct Font {
     pub tables: Seq<Table>,
 }
 
-impl Font {
-    pub fn try_from_stream<T>(stream: &mut T) -> Result<Self>
+impl TryFromStream for Font {
+    fn try_from_stream<T>(stream: &mut T) -> Result<Self>
     where
         T: Read + Seek,
     {
-        let font_directory: FontDirectory = decode(stream)?;
+        let font_directory = FontDirectory::try_from_stream(stream)?;
         let table_dir = font_directory.table_directory.as_slice();
         let mut tables_map = BTreeMap::<u32, Table>::new();
         let mut sorted_entries = table_dir.iter().collect::<Vec<_>>();
@@ -34,16 +34,10 @@ impl Font {
             tables_map.insert(current.tag, table);
         }
 
-        let mut zipped = tables_map
-            .into_values()
-            .zip(table_dir.iter())
-            .collect::<Vec<_>>();
-        zipped.sort_by_key(|(_, entry)| entry.offset);
-
-        let tables = zipped
+        let tables = sorted_entries
             .into_iter()
-            .map(|(table, _)| table)
-            .collect::<Seq<Table>>();
+            .flat_map(|entry| tables_map.remove(&entry.tag))
+            .collect();
 
         Ok(Self {
             font_directory,

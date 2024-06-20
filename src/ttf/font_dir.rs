@@ -1,4 +1,4 @@
-use crate::utils::bincode::Seq;
+use crate::utils::types::Seq;
 use bincode::{de::Decoder, error::DecodeError, Decode, Encode};
 
 #[derive(Debug, Encode)]
@@ -9,7 +9,7 @@ pub struct FontDirectory {
 
 impl Decode for FontDirectory {
     fn decode<D: Decoder>(decoder: &mut D) -> Result<Self, DecodeError> {
-        let offset_subtable: OffsetSubtable = OffsetSubtable::decode(decoder)?;
+        let offset_subtable = OffsetSubtable::decode(decoder)?;
         let table_directory = (0..offset_subtable.num_tables)
             .map(|_| TableEntry::decode(decoder))
             .collect::<Result<_, _>>()?;

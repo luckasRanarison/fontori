@@ -3,12 +3,15 @@ use crate::{
     sfnt::types::FWord,
     table::{tags, Table},
     utils::{
-        bincode::{decode, Seq},
-        reader::ReadVec,
+        reader::{ReadSeq, TryFromStream},
+        types::Seq,
     },
 };
 use bincode::{Decode, Encode};
-use std::{collections::BTreeMap, io::Read};
+use std::{
+    collections::BTreeMap,
+    io::{Read, Seek},
+};
 
 #[derive(Debug, Encode)]
 pub struct Hmtx {
@@ -17,10 +20,10 @@ pub struct Hmtx {
 }
 
 impl Hmtx {
-    pub fn try_from_params<T: Read>(
-        tables: &BTreeMap<u32, Table>,
-        stream: &mut T,
-    ) -> Result<Self, Error> {
+    pub fn try_from_params<T>(tables: &BTreeMap<u32, Table>, stream: &mut T) -> Result<Self, Error>
+    where
+        T: Read + Seek,
+    {
         let num_glyphs = match tables.get(&tags::MAXP) {
             Some(Table::Maxp(maxp)) => Ok(maxp.num_glyphs),
             _ => Err(Error::MissingDependency("maxp".to_owned())),
@@ -31,11 +34,11 @@ impl Hmtx {
         }?;
 
         let h_metrics = (0..num_of_long_hor_metrics)
-            .map(|_| decode::<LongHorMetric, _>(stream))
+            .map(|_| LongHorMetric::try_from_stream(stream))
             .collect::<Result<_, _>>()?;
 
         let remainder = (num_glyphs - num_of_long_hor_metrics) as usize;
-        let left_side_bearing = stream.read_i16_vec(remainder)?.into();
+        let left_side_bearing = stream.read_i16_seq(remainder)?;
 
         Ok(Self {
             h_metrics,
