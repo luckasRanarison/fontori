@@ -1,3 +1,4 @@
+mod cmap;
 mod head;
 mod hhea;
 mod hmtx;
@@ -25,6 +26,7 @@ pub enum Table {
     Hhea(hhea::Hhea),
     Maxp(maxp::Maxp),
     Hmtx(hmtx::Hmtx),
+    Cmap(cmap::Cmap),
     Other(Seq<u8>),
 }
 
@@ -35,6 +37,7 @@ impl Encode for Table {
             Table::Hhea(hhea) => hhea.encode(encoder),
             Table::Maxp(maxp) => maxp.encode(encoder),
             Table::Hmtx(htmx) => htmx.encode(encoder),
+            Table::Cmap(cmap) => cmap.encode(encoder),
             Table::Other(table) => table.encode(encoder),
         }
     }
@@ -57,6 +60,7 @@ impl Table {
             tags::HHEA => Ok(Self::Hhea(decode(stream)?)),
             tags::MAXP => Ok(Self::Maxp(decode(stream)?)),
             tags::HMTX => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
+            tags::CMAP => Ok(Self::Cmap(cmap::Cmap::try_from_stream(stream)?)),
             _ => {
                 let length = next
                     .map(|next| next.offset - current.offset) // possible padding
