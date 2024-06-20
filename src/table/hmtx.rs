@@ -2,10 +2,7 @@ use crate::{
     error::Error,
     sfnt::types::FWord,
     table::{tags, Table},
-    utils::{
-        reader::{ReadSeq, TryFromStream},
-        types::Seq,
-    },
+    utils::{reader::ReadSeq, types::Seq},
 };
 use bincode::{Decode, Encode};
 use std::{

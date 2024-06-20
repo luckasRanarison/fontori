@@ -24,11 +24,7 @@ where
     T: Encode,
 {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
-        for item in &self.0 {
-            item.encode(encoder)?;
-        }
-
-        Ok(())
+        self.0.iter().try_for_each(|item| item.encode(encoder))
     }
 }
 
