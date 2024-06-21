@@ -1,48 +1,66 @@
 use crate::{
-    error::Result,
-    table::Table,
+    error::Error,
+    table::{tags, Table},
     ttf::font_dir::FontDirectory,
-    utils::{reader::TryFromStream, types::Seq},
+    utils::reader::TryFromStream,
 };
-use bincode::Encode;
+use bincode::{enc::Encoder, error::EncodeError, Encode};
 use std::{
     collections::BTreeMap,
     io::{Read, Seek},
 };
 
-#[derive(Debug, Encode)]
+#[derive(Debug)]
 pub struct Font {
     pub font_directory: FontDirectory,
-    pub tables: Seq<Table>,
+    pub tables: BTreeMap<u32, Table>,
 }
 
 impl TryFromStream for Font {
-    fn try_from_stream<T>(stream: &mut T) -> Result<Self>
+    fn try_from_stream<T>(stream: &mut T) -> Result<Self, Error>
     where
         T: Read + Seek,
     {
         let font_directory = FontDirectory::try_from_stream(stream)?;
-        let table_dir = font_directory.table_directory.as_slice();
-        let mut tables_map = BTreeMap::<u32, Table>::new();
-        let mut sorted_entries = table_dir.iter().collect::<Vec<_>>();
+        let mut tables = BTreeMap::new();
+        let table_entry_map = font_directory.get_table_entries_map();
+        let sorted_tags = font_directory.get_sorted_tags();
 
-        sorted_entries.sort_by_key(|t| t.offset);
+        let head = table_entry_map[&tags::HEAD];
+        let head = Table::try_from_params(head, None, &tables, stream)?;
+        tables.insert(tags::HEAD, head);
 
-        for i in 0..sorted_entries.len() {
-            let current = sorted_entries[i];
-            let next = sorted_entries.get(i + 1).cloned();
-            let table = Table::try_from_params(current, next, &tables_map, stream)?;
-            tables_map.insert(current.tag, table);
+        let maxp = table_entry_map[&tags::MAXP];
+        let head = Table::try_from_params(maxp, None, &tables, stream)?;
+        tables.insert(tags::MAXP, head);
+
+        for i in 0..sorted_tags.len() {
+            let curr_tag = sorted_tags[i];
+
+            if tables.contains_key(&curr_tag) {
+                continue;
+            }
+
+            let next_tag = sorted_tags.get(i + 1);
+            let curr_entry = table_entry_map[&curr_tag];
+            let next_entry = next_tag.map(|n| table_entry_map[&n]);
+            let table = Table::try_from_params(curr_entry, next_entry, &tables, stream)?;
+            tables.insert(curr_entry.tag, table);
         }
-
-        let tables = sorted_entries
-            .into_iter()
-            .flat_map(|entry| tables_map.remove(&entry.tag))
-            .collect();
 
         Ok(Self {
             font_directory,
             tables,
         })
+    }
+}
+
+impl Encode for Font {
+    fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
+        self.font_directory.encode(encoder)?;
+        self.font_directory
+            .get_sorted_tags()
+            .into_iter()
+            .try_for_each(|tag| self.tables[&tag].encode(encoder))
     }
 }

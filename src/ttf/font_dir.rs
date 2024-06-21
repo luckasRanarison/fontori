@@ -6,7 +6,10 @@ use crate::{
     },
 };
 use bincode::{Decode, Encode};
-use std::io::{Read, Seek};
+use std::{
+    collections::BTreeMap,
+    io::{Read, Seek},
+};
 
 #[derive(Debug, Encode)]
 pub struct FontDirectory {
@@ -27,6 +30,24 @@ impl TryFromStream for FontDirectory {
             offset_subtable,
             table_directory,
         })
+    }
+}
+
+impl FontDirectory {
+    pub fn get_sorted_tags(&self) -> Vec<u32> {
+        self.table_directory
+            .iter()
+            .map(|t| (t.offset, t.tag))
+            .collect::<BTreeMap<_, _>>()
+            .into_values()
+            .collect()
+    }
+
+    pub fn get_table_entries_map(&self) -> BTreeMap<u32, &TableEntry> {
+        self.table_directory
+            .iter()
+            .map(|t| (t.tag, t))
+            .collect::<_>()
     }
 }
 
