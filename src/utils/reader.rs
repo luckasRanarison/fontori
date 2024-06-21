@@ -40,7 +40,7 @@ where
     where
         U: Decode,
     {
-        let size = mem::size_of::<T>();
+        let size = mem::size_of::<U>();
         let mut buffer = vec![0; length * size];
 
         self.read_exact(&mut buffer)?;
