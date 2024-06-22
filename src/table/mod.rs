@@ -64,16 +64,9 @@ impl Table {
             tags::HEAD => Ok(Self::Head(Head::try_from_stream(stream)?)),
             tags::HHEA => Ok(Self::Hhea(Hhea::try_from_stream(stream)?)),
             tags::MAXP => Ok(Self::Maxp(Maxp::try_from_stream(stream)?)),
-            // tags::CMAP => Ok(Self::Cmap(Cmap::try_from_stream(stream)?)),
+            tags::CMAP => Ok(Self::Cmap(Cmap::try_from_stream(stream)?)),
             tags::HMTX => Ok(Self::Hmtx(Hmtx::try_from_params(tables, stream)?)),
             _ => Ok(stream.read_seq(entry.length as usize).map(Self::Other)?),
-        }
-    }
-
-    pub fn hhea(&self) -> Result<&hhea::Hhea, Error> {
-        match self {
-            Table::Hhea(value) => Ok(value),
-            _ => Err(Error::ExpectedTable("hhea")),
         }
     }
 }

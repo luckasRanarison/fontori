@@ -2,9 +2,12 @@ mod format_12;
 mod format_4;
 mod format_6;
 
+pub use {format_12::Format12, format_4::Format4, format_6::Format6};
+
 use crate::{
     error::Error,
     utils::{
+        bincode::decode_from_reader,
         reader::{ReadSeq, TryFromStream},
         types::Seq,
     },
@@ -64,14 +67,24 @@ pub struct EncodingSubtable {
 
 #[derive(Debug)]
 pub enum CmapSubtable {
-    Format4(format_4::Format4),
-    Format6(format_6::Format6),
-    Format12(format_12::Format12),
+    Format4(Format4),
+    Format6(Format6),
+    Format12(Format12),
 }
 
 impl TryFromStream for CmapSubtable {
-    fn try_from_stream<R: Read>(stream: &mut R) -> Result<Self, Error> {
-        todo!()
+    fn try_from_stream<R>(stream: &mut R) -> Result<Self, Error>
+    where
+        R: Read + Seek,
+    {
+        let format: u16 = decode_from_reader(stream)?;
+
+        match format {
+            4 => Format4::try_from_stream(stream).map(Self::Format4),
+            6 => Format6::try_from_stream(stream).map(Self::Format6),
+            12 => Format12::try_from_stream(stream).map(Self::Format12),
+            _ => Err(Error::UnsupportedCmapSubtable(format)),
+        }
     }
 }
 

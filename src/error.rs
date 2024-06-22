@@ -14,6 +14,8 @@ pub enum Error {
     MissingRequiredTable,
     #[error("Expected '{0}' table")]
     ExpectedTable(&'static str),
+    #[error("Expected cmap subtable '{0}'")]
+    UnsupportedCmapSubtable(u16),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
