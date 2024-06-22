@@ -10,8 +10,10 @@ pub enum Error {
     EncodeError(#[from] EncodeError),
     #[error("{0}")]
     DecodeError(#[from] DecodeError),
-    #[error("Missing dependency table '{0}'")]
-    MissingTable(&'static str),
+    #[error("Required tables are missing")]
+    MissingRequiredTable,
+    #[error("Expected '{0}' table")]
+    ExpectedTable(&'static str),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

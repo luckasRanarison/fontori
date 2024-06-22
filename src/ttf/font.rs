@@ -22,21 +22,25 @@ impl TryFromStream for Font {
         T: Read + Seek,
     {
         let font_directory = FontDirectory::try_from_stream(stream)?;
+
+        if !font_directory.contains_required_tags() {
+            return Err(Error::MissingRequiredTable);
+        }
+
         let table_entry_map = font_directory.get_table_entries_map();
         let mut tables = BTreeMap::new();
 
-        let head = table_entry_map
-            .get(&tags::HEAD)
-            .ok_or(Error::MissingTable("head"))
-            .and_then(|head| Table::try_from_params(head, &tables, stream))?;
-
-        let maxp = table_entry_map
-            .get(&tags::MAXP)
-            .ok_or(Error::MissingTable("maxp"))
-            .and_then(|maxp| Table::try_from_params(maxp, &tables, stream))?;
-
+        let head = table_entry_map[&tags::HEAD];
+        let head = Table::try_from_params(head, &tables, stream)?;
         tables.insert(tags::HEAD, head);
+
+        let maxp = table_entry_map[&tags::MAXP];
+        let maxp = Table::try_from_params(maxp, &tables, stream)?;
         tables.insert(tags::MAXP, maxp);
+
+        let hhea = table_entry_map[&tags::HHEA];
+        let hhea = Table::try_from_params(hhea, &tables, stream)?;
+        tables.insert(tags::HHEA, hhea);
 
         let remaining_entries = table_entry_map
             .into_values()

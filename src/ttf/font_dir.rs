@@ -1,5 +1,6 @@
 use crate::{
     error::Error,
+    table::tags::REQUIRED_TAGS,
     utils::{
         reader::{ReadSeq, TryFromStream},
         types::Seq,
@@ -36,6 +37,14 @@ impl TryFromStream for FontDirectory {
 }
 
 impl FontDirectory {
+    pub fn contains_required_tags(&self) -> bool {
+        let entries_map = self.get_table_entries_map();
+
+        REQUIRED_TAGS
+            .iter()
+            .all(|tag| entries_map.contains_key(tag))
+    }
+
     pub fn get_sorted_table_entries(&self) -> Vec<&TableEntry> {
         self.table_directory
             .iter()

@@ -1,7 +1,4 @@
-use crate::{
-    sfnt::types::{FWord, Fixed, LongDateTime},
-    utils::types::Padding,
-};
+use crate::sfnt::types::{FWord, Fixed, LongDateTime};
 use bincode::{Decode, Encode};
 
 #[derive(Debug, Encode, Decode)]
