@@ -11,7 +11,7 @@ pub use {cmap::Cmap, head::Head, hhea::Hhea, hmtx::Hmtx, maxp::Maxp};
 use crate::{
     error::Error,
     table::tags::Tag,
-    ttf::font_dir::TableEntry,
+    ttf::font_dir::TableDirEntry,
     utils::{
         reader::{ReadSeq, TryFromStream},
         types::Seq,
@@ -24,7 +24,7 @@ use std::{
 };
 
 #[derive(Debug)]
-pub enum Table {
+pub enum FontTable {
     Head(Head),
     Hhea(Hhea),
     Maxp(Maxp),
@@ -33,23 +33,23 @@ pub enum Table {
     Other(Seq<u8>),
 }
 
-impl Encode for Table {
+impl Encode for FontTable {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
         match self {
-            Table::Head(head) => head.encode(encoder),
-            Table::Hhea(hhea) => hhea.encode(encoder),
-            Table::Maxp(maxp) => maxp.encode(encoder),
-            Table::Hmtx(htmx) => htmx.encode(encoder),
-            Table::Cmap(cmap) => cmap.encode(encoder),
-            Table::Other(table) => table.encode(encoder),
+            FontTable::Head(head) => head.encode(encoder),
+            FontTable::Hhea(hhea) => hhea.encode(encoder),
+            FontTable::Maxp(maxp) => maxp.encode(encoder),
+            FontTable::Hmtx(htmx) => htmx.encode(encoder),
+            FontTable::Cmap(cmap) => cmap.encode(encoder),
+            FontTable::Other(table) => table.encode(encoder),
         }
     }
 }
 
-impl Table {
+impl FontTable {
     pub fn try_from_params<T>(
-        entry: &TableEntry,
-        tables: &BTreeMap<u32, Table>,
+        entry: &TableDirEntry,
+        tables: &BTreeMap<Tag, FontTable>,
         stream: &mut T,
     ) -> Result<Self, Error>
     where
@@ -71,7 +71,7 @@ impl Table {
     }
 }
 
-trait GetTable {
+trait GetFontTable {
     fn head(&self) -> Result<&Head, Error>;
     fn hhea(&self) -> Result<&Hhea, Error>;
     fn maxp(&self) -> Result<&Maxp, Error>;
@@ -79,39 +79,39 @@ trait GetTable {
     fn cmap(&self) -> Result<&Cmap, Error>;
 }
 
-impl GetTable for BTreeMap<Tag, Table> {
+impl GetFontTable for BTreeMap<Tag, FontTable> {
     fn head(&self) -> Result<&Head, Error> {
         match &self[&tags::HEAD] {
-            Table::Head(value) => Ok(value),
+            FontTable::Head(value) => Ok(value),
             _ => Err(Error::ExpectedTable("head")),
         }
     }
 
     fn hhea(&self) -> Result<&Hhea, Error> {
         match &self[&tags::HHEA] {
-            Table::Hhea(value) => Ok(value),
+            FontTable::Hhea(value) => Ok(value),
             _ => Err(Error::ExpectedTable("hhea")),
         }
     }
 
     fn maxp(&self) -> Result<&Maxp, Error> {
         match &self[&tags::MAXP] {
-            Table::Maxp(value) => Ok(value),
+            FontTable::Maxp(value) => Ok(value),
             _ => Err(Error::ExpectedTable("maxp")),
         }
     }
 
     fn hmtx(&self) -> Result<&Hmtx, Error> {
         match &self[&tags::HMTX] {
-            Table::Hmtx(value) => Ok(value),
+            FontTable::Hmtx(value) => Ok(value),
             _ => Err(Error::ExpectedTable("hmtx")),
         }
     }
 
     fn cmap(&self) -> Result<&Cmap, Error> {
         match &self[&tags::CMAP] {
-            Table::Cmap(value) => Ok(value),
-            _ => Err(Error::ExpectedTable("hmtx")),
+            FontTable::Cmap(value) => Ok(value),
+            _ => Err(Error::ExpectedTable("cmap")),
         }
     }
 }

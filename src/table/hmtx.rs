@@ -1,7 +1,7 @@
 use crate::{
     error::Error,
     sfnt::types::FWord,
-    table::{Table, GetTable},
+    table::{tags::Tag, FontTable, GetFontTable},
     utils::{reader::ReadSeq, types::Seq},
 };
 use bincode::{Decode, Encode};
@@ -17,7 +17,10 @@ pub struct Hmtx {
 }
 
 impl Hmtx {
-    pub fn try_from_params<T>(tables: &BTreeMap<u32, Table>, stream: &mut T) -> Result<Self, Error>
+    pub fn try_from_params<T>(
+        tables: &BTreeMap<Tag, FontTable>,
+        stream: &mut T,
+    ) -> Result<Self, Error>
     where
         T: Read + Seek,
     {

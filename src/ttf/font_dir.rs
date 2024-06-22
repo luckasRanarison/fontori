@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    table::tags::REQUIRED_TAGS,
+    table::tags::{Tag, REQUIRED_TAGS},
     utils::{
         reader::{ReadSeq, TryFromStream},
         types::Seq,
@@ -17,7 +17,7 @@ const ALIGNMENT: u32 = 4;
 #[derive(Debug, Encode)]
 pub struct FontDirectory {
     pub offset_subtable: OffsetSubtable,
-    pub table_directory: Seq<TableEntry>,
+    pub table_directory: Seq<TableDirEntry>,
 }
 
 impl TryFromStream for FontDirectory {
@@ -45,7 +45,7 @@ impl FontDirectory {
             .all(|tag| entries_map.contains_key(tag))
     }
 
-    pub fn get_sorted_table_entries(&self) -> Vec<&TableEntry> {
+    pub fn get_sorted_table_entries(&self) -> Vec<&TableDirEntry> {
         self.table_directory
             .iter()
             .map(|t| (t.offset, t))
@@ -54,7 +54,7 @@ impl FontDirectory {
             .collect()
     }
 
-    pub fn get_table_entries_map(&self) -> BTreeMap<u32, &TableEntry> {
+    pub fn get_table_entries_map(&self) -> BTreeMap<Tag, &TableDirEntry> {
         self.table_directory
             .iter()
             .map(|t| (t.tag, t))
@@ -72,14 +72,14 @@ pub struct OffsetSubtable {
 }
 
 #[derive(Debug, Encode, Decode)]
-pub struct TableEntry {
+pub struct TableDirEntry {
     pub tag: u32,
     pub check_sum: u32,
     pub offset: u32,
     pub length: u32,
 }
 
-impl TableEntry {
+impl TableDirEntry {
     pub fn padding(&self) -> usize {
         let remainder = (self.offset + self.length) % ALIGNMENT;
         let padding = (ALIGNMENT - remainder) % ALIGNMENT;

@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 pub type Tag = u32;
 
 pub const CMAP: u32 = 1668112752;
@@ -11,3 +13,24 @@ pub const NAME: u32 = 1851878757;
 pub const POST: u32 = 1886352244;
 
 pub const REQUIRED_TAGS: [Tag; 9] = [CMAP, GLYF, HEAD, HHEA, HMTX, LOCA, MAXP, NAME, POST];
+
+fn tag_priority(tag: Tag) -> u8 {
+    match tag {
+        HEAD => 1,
+        MAXP => 2,
+        LOCA => 3,
+        GLYF => 4,
+        HHEA => 5,
+        HMTX => 6,
+        CMAP => 7,
+        NAME => 8,
+        POST => 9,
+        _ => 255,
+    }
+}
+
+pub fn compare_tags(a: Tag, b: Tag) -> Ordering {
+    let a_priority = tag_priority(a);
+    let b_priority = tag_priority(b);
+    a_priority.cmp(&b_priority)
+}

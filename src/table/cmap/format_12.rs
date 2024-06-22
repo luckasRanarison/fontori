@@ -12,7 +12,7 @@ use std::io::{Read, Seek};
 #[derive(Debug, Encode)]
 pub struct Format12 {
     pub format: u16,
-    pub __: Padding<2>,
+    pub _reserved: Padding<2>,
     pub length: u32,
     pub language: u32,
     pub n_groups: u32,
@@ -24,7 +24,7 @@ impl TryFromStream for Format12 {
     where
         T: Read + Seek,
     {
-        let __ = decode_from_reader(stream)?;
+        let _reserved = decode_from_reader(stream)?;
         let length = decode_from_reader(stream)?;
         let language = decode_from_reader(stream)?;
         let n_groups = decode_from_reader(stream)?;
@@ -32,7 +32,7 @@ impl TryFromStream for Format12 {
 
         Ok(Self {
             format: 12,
-            __,
+            _reserved,
             length,
             language,
             n_groups,

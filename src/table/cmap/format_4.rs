@@ -19,7 +19,7 @@ pub struct Format4 {
     pub entry_selector: u16,
     pub range_shift: u16,
     pub end_code: Seq<u16>,
-    pub __: Padding<2>, // reserved
+    pub _reserved: Padding<2>,
     pub start_code: Seq<u16>,
     pub id_delta: Seq<u16>,
     pub id_range_offset: Seq<u16>,
@@ -40,7 +40,7 @@ impl TryFromStream for Format4 {
         let range_shift = decode_from_reader(stream)?;
         let seg_count = (seg_count_x2 as usize) / 2;
         let end_code = stream.read_seq(seg_count)?;
-        let __ = decode_from_reader(stream)?;
+        let _reserved = decode_from_reader(stream)?;
         let start_code = stream.read_seq(seg_count)?;
         let id_delta = stream.read_seq(seg_count)?;
         let id_range_offset = stream.read_seq(seg_count)?;
@@ -58,7 +58,7 @@ impl TryFromStream for Format4 {
             entry_selector,
             range_shift,
             end_code,
-            __,
+            _reserved,
             start_code,
             id_delta,
             id_range_offset,

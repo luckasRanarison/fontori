@@ -1,6 +1,9 @@
 use crate::{
     error::Error,
-    table::{tags, Table},
+    table::{
+        tags::{compare_tags, Tag},
+        FontTable,
+    },
     ttf::font_dir::FontDirectory,
     utils::{reader::TryFromStream, types::Seq},
 };
@@ -13,7 +16,7 @@ use std::{
 #[derive(Debug)]
 pub struct Font {
     pub font_directory: FontDirectory,
-    pub tables: BTreeMap<u32, Table>,
+    pub font_tables: BTreeMap<Tag, FontTable>,
 }
 
 impl TryFromStream for Font {
@@ -27,33 +30,18 @@ impl TryFromStream for Font {
             return Err(Error::MissingRequiredTable);
         }
 
-        let table_entry_map = font_directory.get_table_entries_map();
-        let mut tables = BTreeMap::new();
+        let mut font_tables = BTreeMap::new();
+        let mut table_entries = font_directory.table_directory.iter().collect::<Vec<_>>();
+        table_entries.sort_by(|a, b| compare_tags(a.tag, b.tag));
 
-        let head = table_entry_map[&tags::HEAD];
-        let head = Table::try_from_params(head, &tables, stream)?;
-        tables.insert(tags::HEAD, head);
-
-        let maxp = table_entry_map[&tags::MAXP];
-        let maxp = Table::try_from_params(maxp, &tables, stream)?;
-        tables.insert(tags::MAXP, maxp);
-
-        let hhea = table_entry_map[&tags::HHEA];
-        let hhea = Table::try_from_params(hhea, &tables, stream)?;
-        tables.insert(tags::HHEA, hhea);
-
-        let remaining_entries = table_entry_map
-            .into_values()
-            .filter(|e| !tables.contains_key(&e.tag))
-            .collect::<Vec<_>>();
-
-        for entry in remaining_entries {
-            tables.insert(entry.tag, Table::try_from_params(entry, &tables, stream)?);
+        for entry in table_entries {
+            let table = FontTable::try_from_params(entry, &font_tables, stream)?;
+            font_tables.insert(entry.tag, table);
         }
 
         Ok(Self {
             font_directory,
-            tables,
+            font_tables,
         })
     }
 }
@@ -69,7 +57,7 @@ impl Encode for Font {
             let padding = vec![0u8; padding_size];
             let padding = Seq::from(padding);
 
-            self.tables[&entry.tag].encode(encoder)?;
+            self.font_tables[&entry.tag].encode(encoder)?;
             padding.encode(encoder)?;
         }
 
