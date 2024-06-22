@@ -23,5 +23,4 @@ pub struct Head {
     pub font_direction_hint: i16,
     pub index_to_loc_format: i16,
     pub glyph_data_format: i16,
-    __: Padding<2>,
 }

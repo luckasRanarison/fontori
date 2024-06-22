@@ -45,28 +45,22 @@ impl Encode for Table {
 
 impl Table {
     pub fn try_from_params<T>(
-        current: &TableEntry,
-        next: Option<&TableEntry>,
+        entry: &TableEntry,
         tables: &BTreeMap<u32, Table>,
         stream: &mut T,
     ) -> Result<Self, Error>
     where
         T: Read + Seek,
     {
-        stream.seek(SeekFrom::Start(current.offset.into()))?;
+        stream.seek(SeekFrom::Start(entry.offset.into()))?;
 
-        match current.tag {
+        match entry.tag {
             tags::HEAD => Ok(Self::Head(head::Head::try_from_stream(stream)?)),
             tags::HHEA => Ok(Self::Hhea(hhea::Hhea::try_from_stream(stream)?)),
             tags::MAXP => Ok(Self::Maxp(maxp::Maxp::try_from_stream(stream)?)),
-            tags::CMAP => Ok(Self::Cmap(cmap::Cmap::try_from_stream(stream)?)),
+            // tags::CMAP => Ok(Self::Cmap(cmap::Cmap::try_from_stream(stream)?)),
             tags::HMTX => Ok(Self::Hmtx(hmtx::Hmtx::try_from_params(tables, stream)?)),
-            _ => {
-                let length = next
-                    .map(|next| next.offset - current.offset) // possible padding
-                    .unwrap_or(current.length);
-                Ok(stream.read_seq(length as usize).map(Self::Other)?)
-            }
+            _ => Ok(stream.read_seq(entry.length as usize).map(Self::Other)?),
         }
     }
 }

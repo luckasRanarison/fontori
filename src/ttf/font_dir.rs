@@ -11,6 +11,8 @@ use std::{
     io::{Read, Seek},
 };
 
+const ALIGNMENT: u32 = 4;
+
 #[derive(Debug, Encode)]
 pub struct FontDirectory {
     pub offset_subtable: OffsetSubtable,
@@ -34,10 +36,10 @@ impl TryFromStream for FontDirectory {
 }
 
 impl FontDirectory {
-    pub fn get_sorted_tags(&self) -> Vec<u32> {
+    pub fn get_sorted_table_entries(&self) -> Vec<&TableEntry> {
         self.table_directory
             .iter()
-            .map(|t| (t.offset, t.tag))
+            .map(|t| (t.offset, t))
             .collect::<BTreeMap<_, _>>()
             .into_values()
             .collect()
@@ -66,4 +68,12 @@ pub struct TableEntry {
     pub check_sum: u32,
     pub offset: u32,
     pub length: u32,
+}
+
+impl TableEntry {
+    pub fn padding(&self) -> usize {
+        let remainder = (self.offset + self.length) % ALIGNMENT;
+        let padding = (ALIGNMENT - remainder) % ALIGNMENT;
+        padding as usize
+    }
 }
