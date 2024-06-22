@@ -1,13 +1,15 @@
 mod cmap;
+mod glyf;
 mod head;
 mod hhea;
 mod hmtx;
 mod loca;
 mod maxp;
 
+pub mod glyph;
 pub mod tags;
 
-pub use {cmap::Cmap, head::Head, hhea::Hhea, hmtx::Hmtx, loca::Loca, maxp::Maxp};
+pub use {cmap::Cmap, glyf::Glyf, head::Head, hhea::Hhea, hmtx::Hmtx, loca::Loca, maxp::Maxp};
 
 use crate::{
     error::Error,
@@ -32,6 +34,7 @@ pub enum FontTable {
     Hmtx(Hmtx),
     Cmap(Cmap),
     Loca(Loca),
+    Glyf(Glyf),
     Other(Seq<u8>),
 }
 
@@ -44,6 +47,7 @@ impl Encode for FontTable {
             FontTable::Hmtx(htmx) => htmx.encode(encoder),
             FontTable::Cmap(cmap) => cmap.encode(encoder),
             FontTable::Loca(loca) => loca.encode(encoder),
+            FontTable::Glyf(glyf) => glyf.encode(encoder),
             FontTable::Other(table) => table.encode(encoder),
         }
     }
@@ -70,6 +74,7 @@ impl FontTable {
             tags::CMAP => Ok(Self::Cmap(Cmap::try_from_stream(stream)?)),
             tags::LOCA => Ok(Self::Loca(Loca::try_from_params(tables, stream)?)),
             tags::HMTX => Ok(Self::Hmtx(Hmtx::try_from_params(tables, stream)?)),
+            tags::GLYF => Ok(Self::Glyf(Glyf::try_from_params(tables, stream)?)),
             _ => Ok(stream.read_seq(entry.length as usize).map(Self::Other)?),
         }
     }
@@ -82,6 +87,7 @@ trait GetFontTable {
     fn hmtx(&self) -> Result<&Hmtx, Error>;
     fn cmap(&self) -> Result<&Cmap, Error>;
     fn loca(&self) -> Result<&Loca, Error>;
+    fn glyf(&self) -> Result<&Glyf, Error>;
 }
 
 impl GetFontTable for BTreeMap<Tag, FontTable> {
@@ -124,6 +130,13 @@ impl GetFontTable for BTreeMap<Tag, FontTable> {
         match &self[&tags::LOCA] {
             FontTable::Loca(value) => Ok(value),
             _ => Err(Error::ExpectedTable("loca")),
+        }
+    }
+
+    fn glyf(&self) -> Result<&Glyf, Error> {
+        match &self[&tags::GLYF] {
+            FontTable::Glyf(value) => Ok(value),
+            _ => Err(Error::ExpectedTable("glyf")),
         }
     }
 }
