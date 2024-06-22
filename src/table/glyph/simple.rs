@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    utils::{bincode::decode_from_reader, reader::ReadSeq, types::Seq},
+    utils::{bincode::decode_from_reader, bitflag::BitFlag, reader::ReadSeq, types::Seq},
 };
 use bincode::Encode;
 use std::io::Read;
@@ -22,7 +22,9 @@ impl SimpleGlyph {
         let instruction_length = decode_from_reader(stream)?;
         let instructions = stream.read_seq(instruction_length as usize)?;
         let points = end_pts_of_contours.as_slice().last().unwrap() + 1;
-        let flags = parse_outline_flags(points, stream)?;
+        let (flags, flags_logical) = parse_outline_flags(points, stream)?;
+
+        todo!();
 
         Ok(Self {
             end_pts_of_contours,
@@ -33,9 +35,30 @@ impl SimpleGlyph {
     }
 }
 
-fn parse_outline_flags<T>(points: u16, stream: &mut T) -> Result<Seq<u8>, Error>
+fn parse_outline_flags<T>(points: u16, stream: &mut T) -> Result<(Seq<u8>, Vec<u8>), Error>
 where
     T: Read,
 {
-    todo!()
+    let mut count = 0;
+    let mut queue = Vec::<u8>::new();
+    let mut flags = Vec::<u8>::new();
+    let mut flags_logical = Vec::<u8>::new();
+
+    while count < points {
+        let byte = decode_from_reader(stream)?;
+        let last_flag = queue.pop().and_then(|l| l.has(3).then_some(l));
+
+        if let Some(last) = last_flag {
+            let repetition = vec![last; byte as usize];
+            flags_logical.extend(repetition);
+            count += byte as u16;
+        } else {
+            queue.push(byte);
+            flags.push(byte);
+            flags_logical.push(byte);
+            count += 1;
+        }
+    }
+
+    Ok((flags.into(), flags_logical))
 }
