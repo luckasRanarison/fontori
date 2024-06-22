@@ -34,6 +34,15 @@ impl<T> FromIterator<T> for Seq<T> {
     }
 }
 
+impl<T> IntoIterator for Seq<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl<T> From<Vec<T>> for Seq<T> {
     fn from(value: Vec<T>) -> Self {
         Self(value)

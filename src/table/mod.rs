@@ -2,11 +2,12 @@ mod cmap;
 mod head;
 mod hhea;
 mod hmtx;
+mod loca;
 mod maxp;
 
 pub mod tags;
 
-pub use {cmap::Cmap, head::Head, hhea::Hhea, hmtx::Hmtx, maxp::Maxp};
+pub use {cmap::Cmap, head::Head, hhea::Hhea, hmtx::Hmtx, loca::Loca, maxp::Maxp};
 
 use crate::{
     error::Error,
@@ -30,6 +31,7 @@ pub enum FontTable {
     Maxp(Maxp),
     Hmtx(Hmtx),
     Cmap(Cmap),
+    Loca(Loca),
     Other(Seq<u8>),
 }
 
@@ -41,6 +43,7 @@ impl Encode for FontTable {
             FontTable::Maxp(maxp) => maxp.encode(encoder),
             FontTable::Hmtx(htmx) => htmx.encode(encoder),
             FontTable::Cmap(cmap) => cmap.encode(encoder),
+            FontTable::Loca(loca) => loca.encode(encoder),
             FontTable::Other(table) => table.encode(encoder),
         }
     }
@@ -65,6 +68,7 @@ impl FontTable {
             tags::HHEA => Ok(Self::Hhea(Hhea::try_from_stream(stream)?)),
             tags::MAXP => Ok(Self::Maxp(Maxp::try_from_stream(stream)?)),
             tags::CMAP => Ok(Self::Cmap(Cmap::try_from_stream(stream)?)),
+            tags::LOCA => Ok(Self::Loca(Loca::try_from_params(tables, stream)?)),
             tags::HMTX => Ok(Self::Hmtx(Hmtx::try_from_params(tables, stream)?)),
             _ => Ok(stream.read_seq(entry.length as usize).map(Self::Other)?),
         }
