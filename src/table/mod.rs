@@ -81,6 +81,7 @@ trait GetFontTable {
     fn maxp(&self) -> Result<&Maxp, Error>;
     fn hmtx(&self) -> Result<&Hmtx, Error>;
     fn cmap(&self) -> Result<&Cmap, Error>;
+    fn loca(&self) -> Result<&Loca, Error>;
 }
 
 impl GetFontTable for BTreeMap<Tag, FontTable> {
@@ -116,6 +117,13 @@ impl GetFontTable for BTreeMap<Tag, FontTable> {
         match &self[&tags::CMAP] {
             FontTable::Cmap(value) => Ok(value),
             _ => Err(Error::ExpectedTable("cmap")),
+        }
+    }
+
+    fn loca(&self) -> Result<&Loca, Error> {
+        match &self[&tags::LOCA] {
+            FontTable::Loca(value) => Ok(value),
+            _ => Err(Error::ExpectedTable("loca")),
         }
     }
 }

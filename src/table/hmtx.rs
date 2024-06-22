@@ -26,6 +26,7 @@ impl Hmtx {
     {
         let maxp = tables.maxp()?;
         let hhea = tables.hhea()?;
+
         let num_glyphs = maxp.num_glyphs as usize;
         let num_of_long_hor_metrics = hhea.num_of_long_hor_metrics as usize;
         let h_metrics = stream.read_seq(num_of_long_hor_metrics)?;
