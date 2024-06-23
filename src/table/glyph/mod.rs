@@ -1,4 +1,5 @@
 mod compound;
+mod coord;
 mod simple;
 
 pub use compound::{ComponentGlyph, CompoundGlyph};
