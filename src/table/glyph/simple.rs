@@ -1,15 +1,13 @@
 use crate::{
     error::Error,
     table::glyph::coord::Coord,
-    utils::{
-        bincode::{decode_from_reader, encode_to_vec},
-        bitflag::BitFlag,
-        reader::ReadSeq,
-        types::Seq,
-    },
+    utils::{bincode::decode_from_reader, bitflag::BitFlag, reader::ReadSeq, types::Seq},
 };
 use bincode::Encode;
-use std::io::{Read, Seek};
+use std::{
+    io::{Read, Seek},
+    iter::repeat,
+};
 
 const X_SHORT_VECTOR: u8 = 1;
 const Y_SHORT_VECTOR: u8 = 2;
@@ -21,7 +19,7 @@ const Y_SAME_OR_POSITIVE: u8 = 5;
 pub struct SimpleGlyph {
     pub end_pts_of_contours: Seq<u16>,
     pub instruction_length: u16,
-    pub instructions: Seq<u16>,
+    pub instructions: Seq<u8>,
     pub flags: Seq<u8>,
     pub x_coordinates: Seq<Coord>,
     pub y_coordinates: Seq<Coord>,
@@ -35,8 +33,9 @@ impl SimpleGlyph {
         let end_pts_of_contours = stream.read_seq(contours as usize)?;
         let instruction_length = decode_from_reader(stream)?;
         let instructions = stream.read_seq(instruction_length as usize)?;
-        let points = end_pts_of_contours.as_slice().last().unwrap() + 1;
-        let (flags, flags_logical) = parse_outline_flags(points, stream)?;
+        let last_point = end_pts_of_contours.as_slice().last().cloned();
+        let points_count = last_point.unwrap_or_default() + 1;
+        let (flags, flags_logical) = parse_outline_flags(points_count, stream)?;
         let (x_coordinates, _) =
             parse_coordinates(&flags_logical, stream, X_SHORT_VECTOR, X_SAME_OR_POSITIVE)?;
         let (y_coordinates, _) =
@@ -58,25 +57,25 @@ where
     T: Read,
 {
     let mut i = 0;
-    let mut queue = Vec::<u8>::new();
+    let mut last_flag: Option<u8> = None;
     let mut flags = Vec::<u8>::new();
     let mut flags_logical = Vec::<u8>::new();
 
     while i < points {
-        let byte = decode_from_reader(stream)?;
-        let last_flag = queue.pop().and_then(|l| l.has(REPEAT).then_some(l));
+        let value = decode_from_reader(stream)?;
+        let repeated_flag = last_flag.take().filter(|l| l.has(REPEAT));
 
-        if let Some(last) = last_flag {
-            let repetition = vec![last; byte as usize];
-            flags_logical.extend(repetition);
-            i += byte as u16;
+        if let Some(flag) = repeated_flag {
+            let repeated = repeat(flag).take(value as usize);
+            flags_logical.extend(repeated);
+            i += value as u16;
         } else {
-            queue.push(byte);
-            flags_logical.push(byte);
+            flags_logical.push(value);
+            last_flag = Some(value);
             i += 1;
         }
 
-        flags.push(byte);
+        flags.push(value);
     }
 
     Ok((flags.into(), flags_logical))
@@ -110,8 +109,8 @@ where
             coordinates.push(coord);
             coordinates_logical.push(coord);
         } else {
-            let last = coordinates.last().unwrap();
-            coordinates_logical.push(*last);
+            let last = coordinates.last().cloned().unwrap_or(Coord::UInt16(0));
+            coordinates_logical.push(last);
         }
 
         i += 1;

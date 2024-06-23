@@ -6,10 +6,9 @@ use crate::{
 use bincode::{enc::Encoder, error::EncodeError, Encode};
 use std::{collections::BTreeMap, io::Read};
 
-#[derive(Debug)]
+#[derive(Debug, Encode)]
 pub struct Loca {
-    pub offsets: Seq<u32>,
-    pub format: LocFormat,
+    pub offsets: Seq<LocaOffset>,
 }
 
 impl Loca {
@@ -24,42 +23,36 @@ impl Loca {
         let maxp = tables.maxp()?;
 
         let loc_format = head.index_to_loc_format;
-        let size = maxp.num_glyphs as usize + 1;
+        let length = maxp.num_glyphs as usize + 1;
 
-        let format = match loc_format {
-            0 => LocFormat::Short,
-            _ => LocFormat::Long,
-        };
-
-        let offsets = match format {
-            LocFormat::Short => stream
-                .read_seq::<u16>(size)?
+        let offsets: Seq<_> = match loc_format {
+            0 => stream
+                .read_seq(length)?
                 .into_iter()
-                .map(|o| u32::from(o) * 2)
+                .map(LocaOffset::Short)
                 .collect(),
-            LocFormat::Long => stream.read_seq(size)?,
+            _ => stream
+                .read_seq(length)?
+                .into_iter()
+                .map(LocaOffset::Long)
+                .collect(),
         };
 
-        Ok(Self { offsets, format })
-    }
-}
-
-impl Encode for Loca {
-    fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
-        match self.format {
-            LocFormat::Short => self
-                .offsets
-                .iter()
-                .map(|o| (o / 2) as u16)
-                .collect::<Seq<_>>()
-                .encode(encoder),
-            LocFormat::Long => self.offsets.encode(encoder),
-        }
+        Ok(Self { offsets })
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum LocFormat {
-    Short,
-    Long,
+pub enum LocaOffset {
+    Short(u16),
+    Long(u32),
+}
+
+impl Encode for LocaOffset {
+    fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
+        match self {
+            LocaOffset::Short(value) => value.encode(encoder),
+            LocaOffset::Long(value) => value.encode(encoder),
+        }
+    }
 }

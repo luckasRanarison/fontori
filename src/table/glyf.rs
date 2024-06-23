@@ -6,7 +6,7 @@ use crate::{
 use bincode::Encode;
 use std::{
     collections::BTreeMap,
-    io::{Read, Seek},
+    io::{Read, Seek, SeekFrom},
 };
 
 #[derive(Debug, Encode)]
@@ -23,11 +23,20 @@ impl Glyf {
         T: Read + Seek,
     {
         let maxp = tables.maxp()?;
+        let table_offset = stream.stream_position()?;
+        let mut glyphs = Vec::new();
 
-        let glyphs = (0..maxp.num_glyphs)
-            .map(|_| Glyph::try_from_stream(stream))
-            .collect::<Result<_, _>>()?;
+        for _ in 0..maxp.num_glyphs {
+            let glyph = Glyph::try_from_stream(stream)?;
+            let position = stream.stream_position()?;
+            let offset = position - table_offset;
+            let padding = (4 - (offset % 4)) % 4;
+            stream.seek(SeekFrom::Current(padding as i64))?;
+            glyphs.push(glyph);
+        }
 
-        Ok(Self { glyphs })
+        Ok(Self {
+            glyphs: glyphs.into(),
+        })
     }
 }
