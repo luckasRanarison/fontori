@@ -6,9 +6,10 @@ use crate::{
 use bincode::{enc::Encoder, error::EncodeError, Encode};
 use std::{collections::BTreeMap, io::Read};
 
-#[derive(Debug, Encode)]
+#[derive(Debug)]
 pub struct Loca {
-    pub offsets: Seq<LocaOffset>,
+    pub offsets: Seq<u32>,
+    pub format: LocaFormat,
 }
 
 impl Loca {
@@ -25,34 +26,39 @@ impl Loca {
         let loc_format = head.index_to_loc_format;
         let length = maxp.num_glyphs as usize + 1;
 
-        let offsets: Seq<_> = match loc_format {
-            0 => stream
-                .read_seq(length)?
-                .into_iter()
-                .map(LocaOffset::Short)
-                .collect(),
-            _ => stream
-                .read_seq(length)?
-                .into_iter()
-                .map(LocaOffset::Long)
-                .collect(),
+        let format = match loc_format {
+            0 => LocaFormat::Short,
+            _ => LocaFormat::Long,
         };
 
-        Ok(Self { offsets })
+        let offsets = match format {
+            LocaFormat::Short => stream
+                .read_seq::<u16>(length)?
+                .into_iter()
+                .map(|o| o as u32 * 2)
+                .collect(),
+            LocaFormat::Long => stream.read_seq(length)?,
+        };
+
+        Ok(Self { offsets, format })
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum LocaOffset {
-    Short(u16),
-    Long(u32),
-}
-
-impl Encode for LocaOffset {
+impl Encode for Loca {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
-        match self {
-            LocaOffset::Short(value) => value.encode(encoder),
-            LocaOffset::Long(value) => value.encode(encoder),
+        match self.format {
+            LocaFormat::Short => self
+                .offsets
+                .iter()
+                .map(|o| (o / 2) as u16)
+                .try_for_each(|o| o.encode(encoder)),
+            LocaFormat::Long => self.offsets.encode(encoder),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LocaFormat {
+    Short,
+    Long,
 }

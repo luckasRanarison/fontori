@@ -3,6 +3,7 @@ mod coord;
 mod simple;
 
 pub use compound::{ComponentGlyph, CompoundGlyph};
+pub use coord::Coord;
 pub use simple::SimpleGlyph;
 
 use crate::{error::Error, utils::reader::TryFromStream};

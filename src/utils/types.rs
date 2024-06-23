@@ -48,3 +48,39 @@ impl<T> From<Vec<T>> for Seq<T> {
         Self(value)
     }
 }
+
+#[derive(Debug)]
+pub enum Opt<T> {
+    Some(T),
+    None,
+}
+
+impl<T> Opt<T> {
+    pub fn as_option(&self) -> Option<&T> {
+        match &self {
+            Opt::Some(value) => Some(value),
+            Opt::None => None,
+        }
+    }
+}
+
+impl<T> From<Option<T>> for Opt<T> {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => Opt::Some(value),
+            None => Opt::None,
+        }
+    }
+}
+
+impl<T> Encode for Opt<T>
+where
+    T: Encode,
+{
+    fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
+        match self {
+            Opt::Some(value) => value.encode(encoder),
+            Opt::None => Ok(()),
+        }
+    }
+}

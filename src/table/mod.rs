@@ -80,7 +80,7 @@ impl FontTable {
     }
 }
 
-trait GetFontTable {
+pub trait GetFontTable {
     fn head(&self) -> Result<&Head, Error>;
     fn hhea(&self) -> Result<&Hhea, Error>;
     fn maxp(&self) -> Result<&Maxp, Error>;
